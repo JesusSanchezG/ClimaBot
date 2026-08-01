@@ -7,7 +7,7 @@ from config import SISMO_ALERT_MAG, CIUDAD
 from db import add_history, get_all_chat_ids, kv_get, kv_set
 from earthquakes_api import get_recent_bc, get_today_bc, get_strongest_today, get_region_quakes
 from handlers.common import _edit_or_send
-from handlers.format import _fecha, _mag_emoji
+from handlers.format import _fecha, _mag_emoji, translate_place
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ def get_sismos_menu():
 def _format_sismo(e):
     lines = [f'📊 Magnitud: {e["mag"]:.1f} {_mag_emoji(e["mag"])}']
     if e['place']:
-        lines.append(f'📍 {e["place"]}')
+        lines.append(f'📍 {translate_place(e["place"])}')
     if e['depth_km'] is not None:
         lines.append(f'📏 Profundidad: {e["depth_km"]:.1f} km')
     lines.append(f'🕐 {_fecha(e["time"])} {e["time"].strftime("%H:%M")} hrs')
@@ -47,7 +47,7 @@ async def get_sismo_text(action: str, chat_id: int):
             return 'Sin sismos hoy en Baja California.', _sismos_kb()
         lines = [f'🕐 *SISMOS DE HOY — BAJA CALIFORNIA* ({len(evs)})\n']
         for e in evs:
-            lines.append(f'M {e["mag"]:.1f} {_mag_emoji(e["mag"])}  {e["time"].strftime("%H:%M")}  —  {e["place"]}')
+            lines.append(f'M {e["mag"]:.1f} {_mag_emoji(e["mag"])}  {e["time"].strftime("%H:%M")}  —  {translate_place(e["place"])}')
         text = '\n'.join(lines)
         if len(text) > MAX_MSG_LEN:
             head, total = [], 0
@@ -66,7 +66,7 @@ async def get_sismo_text(action: str, chat_id: int):
             return 'Sin sismos hoy en Baja California.', _sismos_kb()
         e = evs[0]
         text = f'💪 *MÁS FUERTE DE HOY — BAJA CALIFORNIA*\n\n{_format_sismo(e)}'
-        await add_history(chat_id, e['mag'], None, None, e['place'], e['depth_km'], 'sismo')
+        await add_history(chat_id, e['mag'], None, None, translate_place(e['place']), e['depth_km'], 'sismo')
 
     else:
         evs = await get_recent_bc(5)
@@ -74,7 +74,7 @@ async def get_sismo_text(action: str, chat_id: int):
             return 'Sin sismos registrados.', _sismos_kb()
         lines = [f'📜 *ÚLTIMOS 5 SISMOS — BAJA CALIFORNIA*\n']
         for e in evs:
-            lines.append(f'M {e["mag"]:.1f} {_mag_emoji(e["mag"])}  {e["time"].strftime("%d/%m %H:%M")}  —  {e["place"]}')
+            lines.append(f'M {e["mag"]:.1f} {_mag_emoji(e["mag"])}  {e["time"].strftime("%d/%m %H:%M")}  —  {translate_place(e["place"])}')
         text = '\n'.join(lines)
 
     return text, _sismos_kb()

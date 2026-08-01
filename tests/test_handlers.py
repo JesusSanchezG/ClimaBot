@@ -2,7 +2,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from handlers.common import ACTIONS, LABELS, _reply_kb
-from handlers.format import _fecha, _mag_emoji
+from handlers.format import _fecha, _mag_emoji, translate_place
 
 
 def test_mag_emoji():
@@ -16,6 +16,18 @@ def test_mag_emoji():
 def test_fecha():
     dt = datetime(2026, 8, 1, 14, 30, tzinfo=ZoneInfo('UTC'))
     assert _fecha(dt) == 'sábado, 1 de agosto de 2026'
+
+
+def test_translate_place():
+    assert translate_place('18 km WNW of Progreso, B.C., MX') == '18 km al Oeste-Noroeste de Progreso, Baja California, México'
+    assert translate_place('5 km N of Progreso, B.C., MX') == '5 km al Norte de Progreso, Baja California, México'
+    assert translate_place('30 km SSE of La Paz, B.C.S., MX') == '30 km al Sur-Sureste de La Paz, Baja California Sur, México'
+    assert translate_place('12 km ENE of San Felipe, B.C., MX') == '12 km al Este-Noreste de San Felipe, Baja California, México'
+
+
+def test_translate_place_without_distance():
+    assert translate_place('Los Angeles, CA') == 'Los Angeles, California'
+    assert translate_place('') == ''
 
 
 def test_actions_cover_labels():
