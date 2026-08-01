@@ -139,7 +139,7 @@ systemctl restart botclima
 - **Persistencia**: el message_id se guarda en SQLite, sobrevive a reinicios del bot.
 - **Cache**: los datos del clima y de los sismos se cachean 5 minutos en memoria para no golpear las APIs innecesariamente. **El escaneo de alertas no usa cache** para detectar eventos nuevos.
 - **Historial**: las últimas 10 consultas se guardan por chat y son accesibles desde el menú; los registros más antiguos se eliminan automáticamente.
-- **Alertas de sismos**: cada 60 s el bot consulta los sismos en un radio de 300 km de El Paraíso y avisa por mensaje a todos los chats activos cuando hay un sismo nuevo de magnitud ≥ 4.5. El último evento notificado se guarda en la tabla `kv` para no repetir avisos tras un reinicio.
+- **Alertas de sismos**: cada 60 s el bot consulta los sismos en un radio de 30 km de El Paraíso y avisa por mensaje a todos los chats activos cuando hay un sismo nuevo de magnitud ≥ 4.5. El último evento notificado se guarda en la tabla `kv` para no repetir avisos tras un reinicio.
 
 ## Variables de entorno
 
@@ -153,10 +153,10 @@ systemctl restart botclima
 | `BOT_DB_PATH` | `botclima.db` | Ruta de la base SQLite |
 | `CACHE_TTL` | `300` | TTL del cache (segundos) |
 | `HISTORIAL_LIMIT` | `10` | Consultas guardadas por chat |
-| `SISMO_RADIUS_KM` | `300` | Radio de la región para alertas |
+| `SISMO_RADIUS_KM` | `30` | Radio de la región para alertas |
 | `SISMO_ALERT_MAG` | `4.5` | Magnitud mínima para alertar |
 | `SISMO_ALERT_INTERVAL` | `60` | Intervalo de escaneo (segundos) |
-| `SISMO_MEX_MIN_MAG` | `3.0` | Magnitud mínima en consultas de México |
+| `SISMO_MEX_MIN_MAG` | `1.0` | Magnitud mínima en consultas de México |
 
 ## Tests
 
