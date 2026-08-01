@@ -1,5 +1,6 @@
 from datetime import datetime
 from collections import Counter
+import asyncio
 import time
 import httpx
 
@@ -27,11 +28,22 @@ ICON_MAP = {
 def _emoji(icon):
     return ICON_MAP.get(icon[:2], '🌡')
 
-async def _get(url, params):
-    async with httpx.AsyncClient(timeout=10) as client:
-        r = await client.get(url, params=params)
-        r.raise_for_status()
-        return r.json()
+async def _get(url, params, retries=3):
+    last_err = None
+    for attempt in range(retries):
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                r = await client.get(url, params=params)
+                r.raise_for_status()
+                return r.json()
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code < 500 or attempt == retries - 1:
+                raise
+            last_err = e
+        except httpx.TransportError as e:
+            last_err = e
+        await asyncio.sleep(0.5 * (2 ** attempt))
+    raise last_err
 
 async def get_current():
     cached = _cached('current')

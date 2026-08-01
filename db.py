@@ -1,6 +1,6 @@
 import sqlite3
 import asyncio
-from config import DB_PATH
+from config import DB_PATH, HISTORIAL_LIMIT
 
 def _conn():
     c = sqlite3.connect(DB_PATH)
@@ -59,6 +59,15 @@ async def add_history(chat_id, temp, feels_like, humidity, description, wind_spe
             INSERT INTO weather_history (chat_id, temp, feels_like, humidity, description, wind_speed, type)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (chat_id, temp, feels_like, humidity, description, wind_speed, type_))
+        conn.execute('''
+            DELETE FROM weather_history
+            WHERE chat_id = ?
+              AND id NOT IN (
+                  SELECT id FROM weather_history
+                  WHERE chat_id = ?
+                  ORDER BY id DESC LIMIT ?
+              )
+        ''', (chat_id, chat_id, HISTORIAL_LIMIT))
         conn.commit()
         conn.close()
     await asyncio.to_thread(_)

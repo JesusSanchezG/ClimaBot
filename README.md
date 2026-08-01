@@ -125,8 +125,8 @@ systemctl restart botclima
 
 ## Funcionamiento
 
-- **Solo botones**: cualquier mensaje de texto que envíe el usuario se elimina automáticamente.
+- **Botones en el campo de mensaje**: el menú aparece como teclado de respuesta (reply keyboard) en el campo donde se escribe, como en otros bots.
 - **Mensaje único**: el bot siempre edita el mismo mensaje, nunca acumula una cadena.
 - **Persistencia**: el message_id se guarda en SQLite, sobrevive a reinicios del bot.
 - **Cache**: los datos del clima se cachean 5 minutos en memoria para no golpear la API innecesariamente.
-- **Historial**: las últimas 10 consultas se guardan por chat y son accesibles desde el menú.
+- **Historial**: las últimas 10 consultas se guardan por chat y son accesibles desde el menú; los registros más antiguos se eliminan automáticamente.
