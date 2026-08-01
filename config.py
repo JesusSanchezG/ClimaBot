@@ -18,10 +18,10 @@ HISTORIAL_LIMIT = int(os.getenv('HISTORIAL_LIMIT', '10'))
 SISMO_RADIUS_KM = int(os.getenv('SISMO_RADIUS_KM', '30'))
 SISMO_ALERT_MAG = float(os.getenv('SISMO_ALERT_MAG', '4.5'))
 SISMO_ALERT_INTERVAL = int(os.getenv('SISMO_ALERT_INTERVAL', '60'))
-SISMO_MEX_MIN_MAG = float(os.getenv('SISMO_MEX_MIN_MAG', '1.0'))
-SISMO_MEX_BBOX = {
-    'minlat': float(os.getenv('SISMO_MEX_MINLAT', '14')),
-    'maxlat': float(os.getenv('SISMO_MEX_MAXLAT', '33')),
-    'minlon': float(os.getenv('SISMO_MEX_MINLON', '-118')),
-    'maxlon': float(os.getenv('SISMO_MEX_MAXLON', '-86')),
+SISMO_BC_MIN_MAG = float(os.getenv('SISMO_BC_MIN_MAG', '1.0'))
+SISMO_BC_BBOX = {
+    'minlat': float(os.getenv('SISMO_BC_MINLAT', '28.0')),
+    'maxlat': float(os.getenv('SISMO_BC_MAXLAT', '32.72')),
+    'minlon': float(os.getenv('SISMO_BC_MINLON', '-117.2')),
+    'maxlon': float(os.getenv('SISMO_BC_MAXLON', '-112.2')),
 }

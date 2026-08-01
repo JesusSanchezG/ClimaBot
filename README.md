@@ -1,6 +1,6 @@
 # BotClima 🤖🌤️
 
-Bot de Telegram que muestra el clima de **El Paraíso, Mexicali, Baja California** y **sismos en México** (USGS). Navegación por teclado de respuesta en el campo de mensaje, mensaje único auto-actualizable, historial de consultas, pronóstico a 5 días y **alertas automáticas de sismos fuertes en la región**.
+Bot de Telegram que muestra el clima de **El Paraíso, Mexicali, Baja California** y los **sismos de Baja California** (USGS). Navegación por teclado de respuesta en el campo de mensaje, mensaje único auto-actualizable, historial de consultas, pronóstico a 5 días y **alertas automáticas de sismos fuertes en la región**.
 
 ## Tecnologías
 
@@ -135,7 +135,7 @@ systemctl restart botclima
 ## Funcionamiento
 
 - **Botones en el campo de mensaje**: el menú aparece como teclado de respuesta (reply keyboard) en el campo donde se escribe, como en otros bots. El mensaje del menú nunca se edita porque Telegram no permite editar mensajes con teclado de respuesta.
-- **Mensaje único**: las respuestas se muestran en un único mensaje auto-actualizable, separado del menú. El submenú de sismos usa botones inline (sí permiten edición).
+- **Mensaje único**: las respuestas se muestran en un único mensaje auto-actualizable, separado del menú. El submenú de sismos usa botones inline (sí permiten edición). Las consultas de sismos están limitadas a Baja California (M > 1.0) y "Sismos de hoy" muestra todos los del día.
 - **Persistencia**: el message_id se guarda en SQLite, sobrevive a reinicios del bot.
 - **Cache**: los datos del clima y de los sismos se cachean 5 minutos en memoria para no golpear las APIs innecesariamente. **El escaneo de alertas no usa cache** para detectar eventos nuevos.
 - **Historial**: las últimas 10 consultas se guardan por chat y son accesibles desde el menú; los registros más antiguos se eliminan automáticamente.
@@ -156,7 +156,8 @@ systemctl restart botclima
 | `SISMO_RADIUS_KM` | `30` | Radio de la región para alertas |
 | `SISMO_ALERT_MAG` | `4.5` | Magnitud mínima para alertar |
 | `SISMO_ALERT_INTERVAL` | `60` | Intervalo de escaneo (segundos) |
-| `SISMO_MEX_MIN_MAG` | `1.0` | Magnitud mínima en consultas de México |
+| `SISMO_BC_MIN_MAG` | `1.0` | Magnitud mínima en consultas de Baja California |
+| `SISMO_BC_MINLAT/MAXLAT/MINLON/MAXLON` | `28.0/32.72/-117.2/-112.2` | Bbox de Baja California |
 
 ## Tests
 

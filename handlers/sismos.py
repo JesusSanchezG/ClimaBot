@@ -5,7 +5,7 @@ from telegram.ext import ContextTypes
 
 from config import SISMO_ALERT_MAG, CIUDAD
 from db import add_history, get_all_chat_ids, kv_get, kv_set
-from earthquakes_api import get_recent_mexico, get_strongest_today, get_region_quakes
+from earthquakes_api import get_recent_bc, get_today_bc, get_strongest_today, get_region_quakes
 from handlers.common import _edit_or_send
 from handlers.format import _fecha, _mag_emoji
 
@@ -13,15 +13,17 @@ logger = logging.getLogger(__name__)
 
 ALERT_KV_KEY = 'sismo_last_seen_ms'
 
+MAX_MSG_LEN = 4000
+
 def _sismos_kb():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton('🕐 Último sismo', callback_data='sismo_ultimo'),
+        [InlineKeyboardButton('🕐 Sismos de hoy', callback_data='sismo_hoy'),
          InlineKeyboardButton('💪 Más fuerte hoy', callback_data='sismo_fuerte')],
-        [InlineKeyboardButton('📜 Sismos recientes (5)', callback_data='sismo_recientes')],
+        [InlineKeyboardButton('📜 Últimos 5 sismos', callback_data='sismo_recientes')],
     ])
 
 def get_sismos_menu():
-    text = f'🌍 *SISMOS — MÉXICO*\n\nSelecciona una opción:'
+    text = '🌍 *SISMOS — BAJA CALIFORNIA*\n\nSelecciona una opción:'
     return text, _sismos_kb()
 
 def _format_sismo(e):
@@ -39,27 +41,38 @@ def _format_sismo(e):
     return '\n'.join(lines)
 
 async def get_sismo_text(action: str, chat_id: int):
-    if action == 'sismo_ultimo':
-        evs = await get_recent_mexico(1)
+    if action == 'sismo_hoy':
+        evs = await get_today_bc()
         if not evs:
-            return 'Sin sismos registrados.', _sismos_kb()
-        e = evs[0]
-        text = f'🕐 *ÚLTIMO SISMO EN MÉXICO*\n\n{_format_sismo(e)}'
-        await add_history(chat_id, e['mag'], None, None, e['place'], e['depth_km'], 'sismo')
+            return 'Sin sismos hoy en Baja California.', _sismos_kb()
+        lines = [f'🕐 *SISMOS DE HOY — BAJA CALIFORNIA* ({len(evs)})\n']
+        for e in evs:
+            lines.append(f'M {e["mag"]:.1f} {_mag_emoji(e["mag"])}  {e["time"].strftime("%H:%M")}  —  {e["place"]}')
+        text = '\n'.join(lines)
+        if len(text) > MAX_MSG_LEN:
+            head, total = [], 0
+            for ln in lines:
+                if total + len(ln) + 1 > MAX_MSG_LEN:
+                    break
+                head.append(ln)
+                total += len(ln) + 1
+            text = '\n'.join(head) + f'\n… y {len(evs) - len(head) + 1} más'
+        strongest = max(evs, key=lambda e: e['mag'])
+        await add_history(chat_id, strongest['mag'], None, None, f'{len(evs)} sismos hoy (BC)', strongest['depth_km'], 'sismo')
 
     elif action == 'sismo_fuerte':
         evs = await get_strongest_today()
         if not evs:
-            return 'Sin sismos en las últimas 24 horas.', _sismos_kb()
+            return 'Sin sismos hoy en Baja California.', _sismos_kb()
         e = evs[0]
-        text = f'💪 *MÁS FUERTE EN LAS ÚLTIMAS 24 H*\n\n{_format_sismo(e)}'
+        text = f'💪 *MÁS FUERTE DE HOY — BAJA CALIFORNIA*\n\n{_format_sismo(e)}'
         await add_history(chat_id, e['mag'], None, None, e['place'], e['depth_km'], 'sismo')
 
     else:
-        evs = await get_recent_mexico(5)
+        evs = await get_recent_bc(5)
         if not evs:
             return 'Sin sismos registrados.', _sismos_kb()
-        lines = [f'📜 *ÚLTIMOS 5 SISMOS EN MÉXICO*\n']
+        lines = [f'📜 *ÚLTIMOS 5 SISMOS — BAJA CALIFORNIA*\n']
         for e in evs:
             lines.append(f'M {e["mag"]:.1f} {_mag_emoji(e["mag"])}  {e["time"].strftime("%d/%m %H:%M")}  —  {e["place"]}')
         text = '\n'.join(lines)

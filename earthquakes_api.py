@@ -1,8 +1,8 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from zoneinfo import ZoneInfo
 import math
 
-from config import LAT, LON, TZ, CACHE_TTL, SISMO_MEX_BBOX, SISMO_MEX_MIN_MAG, SISMO_RADIUS_KM
+from config import LAT, LON, TZ, CACHE_TTL, SISMO_BC_BBOX, SISMO_BC_MIN_MAG, SISMO_RADIUS_KM
 from http_client import get_json, cache_get, cache_set
 
 QUERY_URL = 'https://earthquake.usgs.gov/fdsnws/event/1/query'
@@ -58,19 +58,32 @@ async def _query(params, cache_key=None, ttl=CACHE_TTL):
         cache_set(cache_key, events)
     return events
 
-async def get_recent_mexico(limit=5):
+def _today_start():
+    start = datetime.now(TZ_LOCAL).replace(hour=0, minute=0, second=0, microsecond=0)
+    return start.astimezone(UTC).strftime('%Y-%m-%dT%H:%M:%S')
+
+async def get_recent_bc(limit=5):
     return await _query({
-        **_bbox_params(SISMO_MEX_BBOX),
-        'minmagnitude': str(SISMO_MEX_MIN_MAG),
+        **_bbox_params(SISMO_BC_BBOX),
+        'minmagnitude': str(SISMO_BC_MIN_MAG),
         'orderby': 'time',
         'limit': str(limit),
     }, cache_key='sismo_recent')
 
-async def get_strongest_today():
-    start = (datetime.now(UTC) - timedelta(hours=24)).strftime('%Y-%m-%dT%H:%M:%S')
+async def get_today_bc(limit=100):
+    date = datetime.now(TZ_LOCAL).strftime('%Y-%m-%d')
     return await _query({
-        **_bbox_params(SISMO_MEX_BBOX),
-        'starttime': start,
+        **_bbox_params(SISMO_BC_BBOX),
+        'minmagnitude': str(SISMO_BC_MIN_MAG),
+        'starttime': _today_start(),
+        'orderby': 'time',
+        'limit': str(limit),
+    }, cache_key=f'sismo_today_{date}')
+
+async def get_strongest_today():
+    return await _query({
+        **_bbox_params(SISMO_BC_BBOX),
+        'starttime': _today_start(),
         'orderby': 'magnitude',
         'limit': '1',
     }, cache_key='sismo_strongest')

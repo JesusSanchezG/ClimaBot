@@ -75,15 +75,36 @@ def test_query_builds_params_and_caches(monkeypatch):
 
     monkeypatch.setattr(ea, 'get_json', fake_get_json)
 
-    evs = asyncio.run(ea.get_recent_mexico(1))
+    evs = asyncio.run(ea.get_recent_bc(1))
     assert len(evs) == 1
     assert evs[0]['id'] == 'ev1'
     assert calls[0]['format'] == 'geojson'
     assert calls[0]['orderby'] == 'time'
     assert calls[0]['limit'] == '1'
+    assert calls[0]['minlatitude'] == '28.0'
+    assert calls[0]['maxlongitude'] == '-112.2'
 
     # segunda llamada usa cache, no vuelve a golpear la API
-    asyncio.run(ea.get_recent_mexico(1))
+    asyncio.run(ea.get_recent_bc(1))
+    assert len(calls) == 1
+
+
+def test_today_query_uses_starttime_and_per_day_cache(monkeypatch):
+    calls = []
+    feature = _make_feature('ev2', 3.3, 2000)
+
+    async def fake_get_json(url, params, retries=3):
+        calls.append(params)
+        return {'features': [feature]}
+
+    monkeypatch.setattr(ea, 'get_json', fake_get_json)
+
+    asyncio.run(ea.get_today_bc())
+    assert 'starttime' in calls[0]
+    assert calls[0]['limit'] == '100'
+    assert calls[0]['minmagnitude'] == '1.0'
+
+    asyncio.run(ea.get_today_bc())
     assert len(calls) == 1
 
 
