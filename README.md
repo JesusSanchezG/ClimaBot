@@ -125,8 +125,8 @@ systemctl restart botclima
 
 ## Funcionamiento
 
-- **Botones en el campo de mensaje**: el menú aparece como teclado de respuesta (reply keyboard) en el campo donde se escribe, como en otros bots.
-- **Mensaje único**: el bot siempre edita el mismo mensaje, nunca acumula una cadena.
+- **Botones en el campo de mensaje**: el menú aparece como teclado de respuesta (reply keyboard) en el campo donde se escribe, como en otros bots. El mensaje del menú nunca se edita porque Telegram no permite editar mensajes con teclado de respuesta.
+- **Mensaje único**: las respuestas se muestran en un único mensaje auto-actualizable, separado del menú.
 - **Persistencia**: el message_id se guarda en SQLite, sobrevive a reinicios del bot.
 - **Cache**: los datos del clima se cachean 5 minutos en memoria para no golpear la API innecesariamente.
 - **Historial**: las últimas 10 consultas se guardan por chat y son accesibles desde el menú; los registros más antiguos se eliminan automáticamente.

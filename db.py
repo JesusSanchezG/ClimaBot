@@ -14,7 +14,8 @@ async def init_db():
         conn.executescript('''
             CREATE TABLE IF NOT EXISTS chat_state (
                 chat_id INTEGER PRIMARY KEY,
-                message_id INTEGER
+                message_id INTEGER,
+                menu_message_id INTEGER
             );
             CREATE TABLE IF NOT EXISTS weather_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -28,6 +29,9 @@ async def init_db():
                 type TEXT DEFAULT 'current'
             );
         ''')
+        cols = [r[1] for r in conn.execute('PRAGMA table_info(chat_state)')]
+        if 'menu_message_id' not in cols:
+            conn.execute('ALTER TABLE chat_state ADD COLUMN menu_message_id INTEGER')
         conn.commit()
         conn.close()
     await asyncio.to_thread(_)
@@ -48,6 +52,18 @@ async def set_chat_state(chat_id, message_id):
             VALUES (?, ?)
             ON CONFLICT(chat_id) DO UPDATE SET message_id=?
         ''', (chat_id, message_id, message_id))
+        conn.commit()
+        conn.close()
+    await asyncio.to_thread(_)
+
+async def set_menu_state(chat_id, menu_message_id):
+    def _():
+        conn = _conn()
+        conn.execute('''
+            INSERT INTO chat_state (chat_id, message_id, menu_message_id)
+            VALUES (?, NULL, ?)
+            ON CONFLICT(chat_id) DO UPDATE SET message_id=NULL, menu_message_id=?
+        ''', (chat_id, menu_message_id, menu_message_id))
         conn.commit()
         conn.close()
     await asyncio.to_thread(_)
