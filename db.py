@@ -28,6 +28,10 @@ async def init_db():
                 wind_speed REAL,
                 type TEXT DEFAULT 'current'
             );
+            CREATE TABLE IF NOT EXISTS kv (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            );
         ''')
         cols = [r[1] for r in conn.execute('PRAGMA table_info(chat_state)')]
         if 'menu_message_id' not in cols:
@@ -99,3 +103,30 @@ async def get_history(chat_id, limit=10):
         conn.close()
         return [dict(r) for r in rows]
     return await asyncio.to_thread(_)
+
+async def get_all_chat_ids():
+    def _():
+        conn = _conn()
+        rows = conn.execute('SELECT chat_id FROM chat_state').fetchall()
+        conn.close()
+        return [r['chat_id'] for r in rows]
+    return await asyncio.to_thread(_)
+
+async def kv_get(key):
+    def _():
+        conn = _conn()
+        row = conn.execute('SELECT value FROM kv WHERE key = ?', (key,)).fetchone()
+        conn.close()
+        return row['value'] if row else None
+    return await asyncio.to_thread(_)
+
+async def kv_set(key, value):
+    def _():
+        conn = _conn()
+        conn.execute('''
+            INSERT INTO kv (key, value) VALUES (?, ?)
+            ON CONFLICT(key) DO UPDATE SET value=excluded.value
+        ''', (key, str(value)))
+        conn.commit()
+        conn.close()
+    await asyncio.to_thread(_)

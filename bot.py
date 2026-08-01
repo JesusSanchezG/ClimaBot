@@ -2,11 +2,11 @@ import logging
 import sys
 
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
 
-from config import TOKEN
+from config import TOKEN, SISMO_ALERT_INTERVAL
 from db import init_db
-from handlers import start, handle_text, unknown_command
+from handlers import start, handle_text, unknown_command, sismo_callback, check_earthquakes
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -38,9 +38,13 @@ def main():
     app = Application.builder().token(TOKEN).post_init(post_init).build()
 
     app.add_handler(CommandHandler('start', start))
+    app.add_handler(CallbackQueryHandler(sismo_callback, pattern='^sismo_'))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     app.add_handler(MessageHandler(filters.COMMAND, unknown_command))
     app.add_error_handler(error_handler)
+
+    app.job_queue.run_repeating(check_earthquakes, interval=SISMO_ALERT_INTERVAL, first=10)
+    logger.info('Escaneo de sismos cada %d segundos', SISMO_ALERT_INTERVAL)
 
     logger.info('Bot iniciando polling...')
     app.run_polling(allowed_updates=Update.ALL_TYPES)

@@ -1,6 +1,6 @@
 # BotClima 🤖🌤️
 
-Bot de Telegram que muestra el clima de **El Paraíso, Mexicali, Baja California**. Navegación exclusiva por botones, mensaje único auto-actualizable, historial de consultas y pronóstico a 5 días.
+Bot de Telegram que muestra el clima de **El Paraíso, Mexicali, Baja California** y **sismos en México** (USGS). Navegación por teclado de respuesta en el campo de mensaje, mensaje único auto-actualizable, historial de consultas, pronóstico a 5 días y **alertas automáticas de sismos fuertes en la región**.
 
 ## Tecnologías
 
@@ -9,23 +9,32 @@ Bot de Telegram que muestra el clima de **El Paraíso, Mexicali, Baja California
 | Lenguaje | Python 3.12+ |
 | Bot Framework | [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot) v22 |
 | Clima API | [OpenWeatherMap 2.5](https://openweathermap.org/api) (gratuita) |
+| Sismos API | [USGS FDSN Event](https://earthquake.usgs.gov/fdsnws/event/1/) (gratuita, sin API key) |
 | HTTP | httpx (async) |
 | Base de datos | SQLite (nativo, sin ORM) |
 | Cache | Diccionario en memoria con TTL de 5 min |
+| Tests | pytest |
 | Servicio | systemd (VPS) |
 
 ## Estructura
 
 ```
 BotClima/
-├── bot.py               # Entry point, configura la app e inicia polling
+├── bot.py               # Entry point: app, polling, job de alertas de sismos
 ├── config.py            # Variables de entorno y constantes
-├── db.py                # SQLite: chat_state (message_id) + historial
-├── weather_api.py       # Cliente OpenWeatherMap + cache en memoria
-├── handlers.py          # Botones, formato de mensajes, borrado de texto
+├── http_client.py       # Cliente HTTP compartido (retries) + cache en memoria
+├── weather_api.py       # Cliente OpenWeatherMap
+├── earthquakes_api.py   # Cliente USGS FDSN (sismos) + haversine
+├── db.py                # SQLite: chat_state, historial y tabla kv (alertas)
+├── handlers/
+│   ├── __init__.py      # Routing de acciones y handle_text
+│   ├── common.py        # Teclados, mensaje único, /start
+│   ├── clima.py         # Clima del día, semanal e historial
+│   ├── sismos.py        # Consultas de sismos + alertas automáticas
+│   └── format.py        # Fechas, emojis de magnitud
+├── tests/               # pytest
 ├── .env                 # Tokens (NO se sube a git)
 ├── requirements.txt     # Dependencias
-├── .gitignore
 ├── README.md
 └── deploy/
     └── botclima.service # systemd unit para el VPS
@@ -126,7 +135,34 @@ systemctl restart botclima
 ## Funcionamiento
 
 - **Botones en el campo de mensaje**: el menú aparece como teclado de respuesta (reply keyboard) en el campo donde se escribe, como en otros bots. El mensaje del menú nunca se edita porque Telegram no permite editar mensajes con teclado de respuesta.
-- **Mensaje único**: las respuestas se muestran en un único mensaje auto-actualizable, separado del menú.
+- **Mensaje único**: las respuestas se muestran en un único mensaje auto-actualizable, separado del menú. El submenú de sismos usa botones inline (sí permiten edición).
 - **Persistencia**: el message_id se guarda en SQLite, sobrevive a reinicios del bot.
-- **Cache**: los datos del clima se cachean 5 minutos en memoria para no golpear la API innecesariamente.
+- **Cache**: los datos del clima y de los sismos se cachean 5 minutos en memoria para no golpear las APIs innecesariamente. **El escaneo de alertas no usa cache** para detectar eventos nuevos.
 - **Historial**: las últimas 10 consultas se guardan por chat y son accesibles desde el menú; los registros más antiguos se eliminan automáticamente.
+- **Alertas de sismos**: cada 60 s el bot consulta los sismos en un radio de 300 km de El Paraíso y avisa por mensaje a todos los chats activos cuando hay un sismo nuevo de magnitud ≥ 4.5. El último evento notificado se guarda en la tabla `kv` para no repetir avisos tras un reinicio.
+
+## Variables de entorno
+
+| Variable | Default | Descripción |
+|---|---|---|
+| `TELEGRAM_BOT_TOKEN` | — | Token del bot (obligatorio) |
+| `OWM_API_KEY` | — | API key de OpenWeatherMap |
+| `BOT_LAT` / `BOT_LON` | `32.6172` / `-115.5706` | Coordenadas de referencia |
+| `BOT_CIUDAD` | `El Paraíso, Mexicali` | Nombre mostrado |
+| `BOT_TZ` | `America/Tijuana` | Zona horaria para horas locales |
+| `BOT_DB_PATH` | `botclima.db` | Ruta de la base SQLite |
+| `CACHE_TTL` | `300` | TTL del cache (segundos) |
+| `HISTORIAL_LIMIT` | `10` | Consultas guardadas por chat |
+| `SISMO_RADIUS_KM` | `300` | Radio de la región para alertas |
+| `SISMO_ALERT_MAG` | `4.5` | Magnitud mínima para alertar |
+| `SISMO_ALERT_INTERVAL` | `60` | Intervalo de escaneo (segundos) |
+| `SISMO_MEX_MIN_MAG` | `3.0` | Magnitud mínima en consultas de México |
+
+## Tests
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+pytest tests/
+```

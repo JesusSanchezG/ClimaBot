@@ -1,24 +1,12 @@
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from collections import Counter
-import asyncio
-import time
-import httpx
 
-from config import OWM_API_KEY, LAT, LON, CACHE_TTL
+from config import OWM_API_KEY, LAT, LON, CACHE_TTL, TZ
+from http_client import get_json, cache_get, cache_set
 
 CURRENT_URL = 'https://api.openweathermap.org/data/2.5/weather'
 FORECAST_URL = 'https://api.openweathermap.org/data/2.5/forecast'
-
-_cache = {}
-
-def _cached(key, ttl=CACHE_TTL):
-    now = time.monotonic()
-    if key in _cache and (now - _cache[key]['ts']) < ttl:
-        return _cache[key]['val']
-    return None
-
-def _set_cache(key, val):
-    _cache[key] = {'val': val, 'ts': time.monotonic()}
 
 ICON_MAP = {
     '01': '☀️', '02': '🌤', '03': '⛅', '04': '☁️',
@@ -28,35 +16,18 @@ ICON_MAP = {
 def _emoji(icon):
     return ICON_MAP.get(icon[:2], '🌡')
 
-async def _get(url, params, retries=3):
-    last_err = None
-    for attempt in range(retries):
-        try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                r = await client.get(url, params=params)
-                r.raise_for_status()
-                return r.json()
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code < 500 or attempt == retries - 1:
-                raise
-            last_err = e
-        except httpx.TransportError as e:
-            last_err = e
-        await asyncio.sleep(0.5 * (2 ** attempt))
-    raise last_err
-
 async def get_current():
-    cached = _cached('current')
+    cached = cache_get('current', CACHE_TTL)
     if cached:
         return cached
 
-    data = await _get(CURRENT_URL, {
+    data = await get_json(CURRENT_URL, {
         'lat': LAT, 'lon': LON,
         'appid': OWM_API_KEY,
         'units': 'metric', 'lang': 'es',
     })
 
-    now = datetime.now()
+    now = datetime.now(ZoneInfo(TZ))
     r = {
         'temp': data['main']['temp'],
         'feels_like': data['main']['feels_like'],
@@ -66,23 +37,24 @@ async def get_current():
         'emoji': _emoji(data['weather'][0]['icon']),
         'dt': now,
     }
-    _set_cache('current', r)
+    cache_set('current', r)
     return r
 
 async def get_forecast():
-    cached = _cached('forecast')
+    cached = cache_get('forecast', CACHE_TTL)
     if cached:
         return cached
 
-    data = await _get(FORECAST_URL, {
+    data = await get_json(FORECAST_URL, {
         'lat': LAT, 'lon': LON,
         'appid': OWM_API_KEY,
         'units': 'metric', 'lang': 'es',
     })
 
+    tz = ZoneInfo(TZ)
     days = {}
     for item in data['list']:
-        dt = datetime.fromtimestamp(item['dt'])
+        dt = datetime.fromtimestamp(item['dt'], tz)
         dk = dt.strftime('%Y-%m-%d')
         if dk not in days:
             days[dk] = {'t': [], 'd': [], 'i': []}
@@ -93,7 +65,7 @@ async def get_forecast():
     result = []
     for dk in sorted(days.keys())[:5]:
         d = days[dk]
-        dt = datetime.strptime(dk, '%Y-%m-%d')
+        dt = datetime.strptime(dk, '%Y-%m-%d').replace(tzinfo=tz)
         desc = Counter(d['d']).most_common(1)[0][0].capitalize()
         icon = Counter(d['i']).most_common(1)[0][0]
         result.append({
@@ -104,5 +76,5 @@ async def get_forecast():
             'emoji': _emoji(icon),
         })
 
-    _set_cache('forecast', result)
+    cache_set('forecast', result)
     return result
